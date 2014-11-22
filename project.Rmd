@@ -1,0 +1,85 @@
+---
+title: "Coursera Machine Learning Project"
+author: "Di Zhou"
+date: "Monday, November 17, 2014"
+output: pdf_document
+---
+
+# Summary
+The goal of this project is to predict the manner in which they did the exercise.The data for this project come from this source: 
+(http://groupware.les.inf.puc-rio.br/har)
+(see the section on the Weight Lifting Exercise Dataset).
+
+The training data for this project are available here: 
+(https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv)
+
+The test data are available here: 
+(https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv)
+
+# Package Loading
+Load the packages `caret` and `randomForest` into R.
+
+```{r, echo=FALSE}
+library(caret)
+library(randomForest)
+```
+
+# Data Cleaning
+Notice there are a lot of blanks and missing values in the training set, we will fill the blank with NAs and remove columns with lots of NAs.
+
+```{r, echo=FALSE}
+setwd("d:/Program Files/RStudio/PracticalMachineLearning")
+training <- read.csv("pml_training.csv", na.string = c("NA", ""))
+testing <- read.csv("pml_testing.csv", na.string = c("NA", ""))
+NAs <- apply(training,2,function(x) sum(is.na(x)))
+CleanTrain <- training[,which(NAs == 0)]
+colnames(CleanTrain)
+```
+
+There are also some unrelated variables for building the model, such as X, user_names, new_window, etc, we are removing them.
+
+```{r, echo=FALSE}
+CleanTrain <- CleanTrain[, -c(1:7)]
+```
+
+# Model Building
+First, for cross validation, we are spliting the cleaned training set into 75% **Train** and 25% **Test** sets.
+
+```{r, echo=FALSE}
+inTrain <- createDataPartition(y = CleanTrain$classe, p=0.75, list=FALSE)
+Train <- CleanTrain[inTrain, ]
+Test <- CleanTrain[-inTrain, ]
+```
+
+As recommended from the paper, we are using random forests method to build the model. 
+
+```{r, echo=FALSE}
+fitControl <- trainControl(method = "cv", number = 5)
+set.seed(12345)
+modelFit <- train(classe ~ ., data = Train,
+                 method = "rf",
+                 trControl = fitControl)
+modelFit
+```
+
+After the model was built, we are using it to predict the **Test** set. 
+```{r, echo=FALSE, }
+TestPredict<-predict(modelFit, Test)
+cm<-confusionMatrix(Test$classe, TestPredict)
+cm
+```
+We expect the out of sample error is that: when we apply the model to Test set, the error between the predicted Test classe and the actual Test classe. We can see that the model for the Test set has 99.43% accuracy, so the out of sample error rate is 0.57%
+
+
+# Predict the testing set
+The testing set was provided, and predicted using this model we get he answers listed below:
+
+```{r, echo=F}
+answers <- predict(modelFit, testing)
+answers
+```
+
+The results are correct.
+
+
+
